@@ -1,13 +1,10 @@
-use crate::{states::*, state_machine::*};
+use super::{state_machine::*, state_machine::transitions::*};
 
 const INITIAL_STATE_NAME: &str = "start";
 const MENU_STATE_NAME: &str = "menu";
 const REGISTE_STATE_NAME: &str = "register";
-
 const MENU_MESSAGE: &str = "1: Novo registro\n2: Lista de registros";
-
 const REGISTER_NAME_QUESTION: &str = "Qual o nome do registro?";
-
 const REGISTER_LIST: &str = "João Silva\nLucas Neto\nAvestruz de Oliveira";
 
 pub fn init_chatbot_state_machine() -> Result<StateMachine, StateMachineErrors>  {

@@ -1,92 +1,33 @@
-use std::collections::HashMap;
-
-use crate::state_machine::State;
-
-#[derive(Debug)]
-pub enum StateMachineErrors {
-    StateNotFound,
-    InitialStateNotSet,
-    WrongTransition,
-}
-
-pub struct StateMachine
-{
-    states: HashMap<String, State>,    
-    initial_state_name: Option<String>,
-    current_state: Option<String>,
-    state_data: String,    
-}
-impl StateMachine
-{
-    pub fn new(state_data: &str) -> Self {
-        Self { 
-            states: HashMap::new(),
-            initial_state_name: None,
-            current_state: None,
-            state_data: String::from(state_data),
-        }
-    }
-
-    pub fn add_state(&mut self, state: State) {
-        self.states.insert(state.name.clone(), state);
-    }
-
-    fn get_states(&self) -> &HashMap<String, State> {
-        &self.states
-    }
-
-    fn get_state(&self, name: &str) -> Option<&State> {
-        self.states.get(name)
-    }
-
-    pub fn set_initial_state_name(&mut self, name: &str) -> Result<(), StateMachineErrors> {
-        let state = self.states.get(name);        
-        if state.is_some() {
-            self.initial_state_name = Some(String::from(name));
-            self.current_state = Some(String::from(name));
-            Ok(())
-        } else {
-            Err(StateMachineErrors::StateNotFound)
-        }
-    }
-
-    fn get_initial_state(&self) -> Option<&State> {
-        match &self.initial_state_name {
-            Some(name) => self.states.get(name),
-            None => None
-        }
-    }
-
-    pub fn transition_state(&mut self, action: &str) -> Result<Option<String>, StateMachineErrors>{        
-        let current_state_name = match &self.current_state {
-            Some(s) => self.states.get(s),
-            None => return Err(StateMachineErrors::InitialStateNotSet),
-        };
-
-        let current_state = match current_state_name {
-            Some(s) => s,
-            None => return Err(StateMachineErrors::InitialStateNotSet),
-        };
-        
-        let new_state_name = current_state.transition(&self.state_data, action);
-        
-        if let Some((n, output)) = new_state_name {
-            if !self.states.contains_key(&n) {
-                return Err(StateMachineErrors::StateNotFound)
-            }
-            self.current_state = Some(n);
-            return Ok(output);
-        };
-        
-        Err(StateMachineErrors::WrongTransition)
-    }
-}
-
 #[cfg(test)]
-mod states_test {
-    use crate::state_machine::EqTransitionRule;
+mod tests {
+    use super::super::*;
+    use super::super::transitions::*;
 
-    use super::*;
+    #[test]
+    fn state_should_have_name() {
+        let state_name = "one";
+
+        let state = State::new(state_name);
+
+        assert_eq!(state_name, &state.name);
+    }
+
+    #[test]
+    fn state_should_transition_to_right_state() {
+        let mut state = State::new("base");
+        let transition_rule_1 = FnTransitionRule::new(|_data,action|action == "1");
+        let transition_rule_2 = FnTransitionRule::new(|_data,action|action == "2");
+        state.add_transition("one", Box::new(transition_rule_1));
+        state.add_transition("two", Box::new(transition_rule_2));
+
+        let new_state_1 = state.transition("data", "1");
+        let new_state_2 = state.transition("data", "2");
+        let new_state_3 = state.transition("data", "3");
+        
+        assert_eq!("one", new_state_1.as_ref().unwrap().0);
+        assert_eq!("two", new_state_2.as_ref().unwrap().0);
+        assert!(new_state_3.is_none());
+    }
 
     #[test]
     fn state_should_have_names() {
