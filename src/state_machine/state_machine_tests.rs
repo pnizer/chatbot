@@ -17,8 +17,8 @@ mod tests {
         let mut state = State::new("base");
         let transition_rule_1 = FnTransitionRule::new(|_data,action|action == "1");
         let transition_rule_2 = FnTransitionRule::new(|_data,action|action == "2");
-        state.add_transition("one", Box::new(transition_rule_1));
-        state.add_transition("two", Box::new(transition_rule_2));
+        state.add_transition("one", transition_rule_1);
+        state.add_transition("two", transition_rule_2);
 
         let new_state_1 = state.transition("data", "1");
         let new_state_2 = state.transition("data", "2");
@@ -85,9 +85,9 @@ mod tests {
         let name_1 = "state 1";
         let name_2 = "state 2";
         let mut state_1 = State::new(name_1);
-        state_1.add_transition(name_2, Box::new(EqTransitionRule::new("hi")));
+        state_1.add_transition(name_2, EqTransitionRule::new("hi"));
         let mut state_2 = State::new(name_2);
-        state_1.add_transition(name_1, Box::new(EqTransitionRule::new("hi")));
+        state_1.add_transition(name_1, EqTransitionRule::new("hi"));
         state_machine.add_state(state_1);
         state_machine.add_state(state_2);
         state_machine.set_initial_state_name(name_1)?;
@@ -104,9 +104,9 @@ mod tests {
         let name_1 = "state 1";
         let name_2 = "state 2";
         let mut state_1 = State::new(name_1);
-        state_1.add_transition(name_2, Box::new(EqTransitionRule::new("hi")));
+        state_1.add_transition(name_2, EqTransitionRule::new("hi"));
         let mut state_2 = State::new(name_2);
-        state_2.add_transition(name_1, Box::new(EqTransitionRule::new("hi")));
+        state_2.add_transition(name_1, EqTransitionRule::new("hi"));
         state_machine.add_state(state_1);
         state_machine.add_state(state_2);
         state_machine.set_initial_state_name(name_1)?;

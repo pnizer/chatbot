@@ -11,15 +11,15 @@ pub fn init_chatbot_state_machine() -> Result<StateMachine, StateMachineErrors> 
     let mut state_machine = StateMachine::new("");
 
     let mut initial_state = State::new(INITIAL_STATE_NAME);
-    initial_state.add_transition_with_output(MENU_STATE_NAME, Box::new(DefaultTransitionRule::new()), Box::new(FixedTransitionOutput::new(MENU_MESSAGE)));
+    initial_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new(MENU_MESSAGE));
 
     let mut menu_state = State::new(MENU_STATE_NAME);
-    menu_state.add_transition_with_output(REGISTE_STATE_NAME, Box::new(EqTransitionRule::new("1")), Box::new(FixedTransitionOutput::new(REGISTER_NAME_QUESTION)));
-    menu_state.add_transition_with_output(MENU_STATE_NAME, Box::new(EqTransitionRule::new("2")), Box::new(FixedTransitionOutput::new(REGISTER_LIST)));
-    menu_state.add_transition_with_output(MENU_STATE_NAME, Box::new(DefaultTransitionRule::new()), Box::new(FixedTransitionOutput::new(MENU_MESSAGE)));
+    menu_state.add_transition_with_output(REGISTE_STATE_NAME, EqTransitionRule::new("1"), FixedTransitionOutput::new(REGISTER_NAME_QUESTION));
+    menu_state.add_transition_with_output(MENU_STATE_NAME, EqTransitionRule::new("2"), FixedTransitionOutput::new(REGISTER_LIST));
+    menu_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new(MENU_MESSAGE));
 
     let mut register_state = State::new(REGISTE_STATE_NAME);
-    register_state.add_transition_with_output(MENU_STATE_NAME, Box::new(DefaultTransitionRule::new()), Box::new(FixedTransitionOutput::new(MENU_MESSAGE)));
+    register_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new(MENU_MESSAGE));
 
 
     state_machine.add_state(initial_state);

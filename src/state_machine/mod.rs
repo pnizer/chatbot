@@ -30,13 +30,15 @@ impl State {
             transitions: Vec::new(),
          }
     }
-
-    pub fn add_transition(&mut self, target: &str, rule: Box<dyn TransitionRule>) {
-        self.transitions.push((String::from(target), rule, Box::new(EmptyTransitionOutput::new())));
+    
+    pub fn add_transition<TR> (&mut self, target: &str, rule: TR)
+    where TR: TransitionRule + 'static {
+        self.transitions.push((String::from(target), Box::new(rule), Box::new(EmptyTransitionOutput::new())));
     }
 
-    pub fn add_transition_with_output(&mut self, target: &str, rule: Box<dyn TransitionRule>, output: Box<dyn TransitionOutput>) {
-        self.transitions.push((String::from(target), rule, output));
+    pub fn add_transition_with_output<TR, TO>(&mut self, target: &str, rule: TR, output: TO)
+    where TR: TransitionRule + 'static, TO: TransitionOutput + 'static {
+        self.transitions.push((String::from(target), Box::new(rule), Box::new(output)));
     }
 
     pub fn transition(&self, data: &str, action: &str) -> Option<(String, Option<String>)> {
