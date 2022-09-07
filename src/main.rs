@@ -7,6 +7,7 @@ mod whatsapp_messages;
 mod messages;
 mod state_machine;
 mod chatbot;
+mod registration;
 
 fn main() -> Result<(), StateMachineErrors> {
     let mut chatbot = init_chatbot_state_machine()?;    
