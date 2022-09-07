@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use chatbot::init_chatbot_state_machine;
 use state_machine::StateMachineErrors;
 use std::io::{self, BufRead};

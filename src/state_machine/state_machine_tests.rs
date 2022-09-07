@@ -87,7 +87,7 @@ mod tests {
         let mut state_1 = State::new(name_1);
         state_1.add_transition(name_2, EqTransitionRule::new("hi"));
         let mut state_2 = State::new(name_2);
-        state_1.add_transition(name_1, EqTransitionRule::new("hi"));
+        state_2.add_transition(name_1, EqTransitionRule::new("hi"));
         state_machine.add_state(state_1);
         state_machine.add_state(state_2);
         state_machine.set_initial_state_name(name_1)?;

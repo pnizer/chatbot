@@ -23,7 +23,7 @@ impl <'a> MessagesProcessor<'a> {
         self.chat_state_storage.push_chat_state_for(&event.source, event.message_type, new_state).await;
     }
 
-    fn process_next_state_and_response(&self, current_state: &ChatState, message_content: &str) -> ChatState {
+    fn process_next_state_and_response(&self, current_state: &ChatState, _message_content: &str) -> ChatState {
         ChatState { 
             message_count: current_state.message_count + 1,
         }
