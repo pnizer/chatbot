@@ -16,8 +16,11 @@ fn main() -> Result<(), StateMachineErrors> {
         match line_result {
             Err(_e) => { return Err(StateMachineErrors::StateNotFound); },
             Ok(line) => { 
-                let output = chatbot.transition_state(&line)?;
-                if let Some(s) = output {
+                let (transition_output, state_output) = chatbot.transition_state(&line)?;
+                if let Some(s) = transition_output {
+                    println!("{}", &s);
+                }
+                if let Some(s) = state_output {
                     println!("{}", &s);
                 }
             }

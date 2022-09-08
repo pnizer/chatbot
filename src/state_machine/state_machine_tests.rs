@@ -2,6 +2,7 @@
 mod tests {
     use super::super::*;
     use super::super::transitions::*;
+    use super::super::state_output::*;
 
     #[test]
     fn state_should_have_name() {
@@ -36,6 +37,19 @@ mod tests {
         let state = State::new(name);
 
         assert_eq!(name, state.name);
+    }
+
+    #[test]
+    fn state_should_have_optional_output() {
+        let name = "state 1";
+        let mut state = State::new(name);
+        let state_output = FixedStateOutput::new("hello there!");
+        state.set_output(state_output);
+        
+        let output: Option<String> = state.generate_output("data");
+
+        assert_eq!(true, output.is_some());
+        assert_eq!("hello there!", output.as_ref().unwrap());
     }
 
     #[test]
@@ -115,6 +129,29 @@ mod tests {
         state_machine.transition_state("hi")?;
 
         assert_eq!(name_1, state_machine.current_state.as_ref().unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn state_machine_should_transition_with_state_output() -> Result<(), StateMachineErrors> {
+        let mut state_machine = StateMachine::new("");
+        let name_1 = "state 1";
+        let name_2 = "state 2";
+        let mut state_1 = State::new(name_1);
+        state_1.add_transition(name_2, EqTransitionRule::new("hi"));
+        let mut state_2 = State::new(name_2);
+        state_2.set_output(FixedStateOutput::new("fixed value"));
+        state_2.add_transition(name_1, EqTransitionRule::new("hi"));        
+        state_machine.add_state(state_1);
+        state_machine.add_state(state_2);
+        state_machine.set_initial_state_name(name_1)?;
+        
+        let (_transition_output_01, state_output_01) = state_machine.transition_state("hi")?;
+        let (_transition_output_02, state_output_02) = state_machine.transition_state("hi")?;
+
+        assert_eq!(true, state_output_01.is_some());
+        assert_eq!("fixed value", state_output_01.unwrap());
+        assert_eq!(true, state_output_02.is_none());
         Ok(())
     }
 }

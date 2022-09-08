@@ -2,6 +2,7 @@ use self::transitions::EmptyTransitionOutput;
 use std::{collections::HashMap};
 
 pub mod transitions;
+pub mod state_output;
 mod state_machine_tests;
 
 pub trait TransitionRule {
@@ -10,6 +11,10 @@ pub trait TransitionRule {
 
 pub trait TransitionOutput {
     fn generate_output(&self, data: &str, action: &str) -> Option<String>;
+}
+
+pub trait StateOutput {
+    fn generate_output(&self, data: &str) -> Option<String>;
 }
 
 #[derive(Debug)]
@@ -22,12 +27,14 @@ pub enum StateMachineErrors {
 pub struct State {
     pub name: String,    
     transitions: Vec<(String, Box<dyn TransitionRule>, Box<dyn TransitionOutput>)>,
+    output: Option<Box<dyn StateOutput>>,
 }
 impl State {
     pub fn new(name: &str) -> Self {
         Self {
             name: String::from(name),
             transitions: Vec::new(),
+            output: None,
          }
     }
     
@@ -39,6 +46,18 @@ impl State {
     pub fn add_transition_with_output<TR, TO>(&mut self, target: &str, rule: TR, output: TO)
     where TR: TransitionRule + 'static, TO: TransitionOutput + 'static {
         self.transitions.push((String::from(target), Box::new(rule), Box::new(output)));
+    }
+
+    pub fn set_output<O>(&mut self, output: O)
+    where O: StateOutput + 'static {
+        self.output = Some(Box::new(output));
+    }
+
+    pub fn generate_output(&self, data: &str) -> Option<String> {
+        match &self.output {
+            None => None,
+            Some(state_output) => state_output.generate_output(data)
+        }
     }
 
     pub fn transition(&self, data: &str, action: &str) -> Option<(String, Option<String>)> {
@@ -99,7 +118,7 @@ impl StateMachine
         }
     }
 
-    pub fn transition_state(&mut self, action: &str) -> Result<Option<String>, StateMachineErrors>{        
+    pub fn transition_state(&mut self, action: &str) -> Result<(Option<String>, Option<String>), StateMachineErrors>{        
         let current_state_name = match &self.current_state {
             Some(s) => self.states.get(s),
             None => return Err(StateMachineErrors::InitialStateNotSet),
@@ -112,12 +131,13 @@ impl StateMachine
         
         let new_state_name = current_state.transition(&self.state_data, action);
         
-        if let Some((n, output)) = new_state_name {
+        if let Some((n, transition_output)) = new_state_name {
             if !self.states.contains_key(&n) {
                 return Err(StateMachineErrors::StateNotFound)
             }
-            self.current_state = Some(n);
-            return Ok(output);
+            let state_output = self.states.get(&n).unwrap().generate_output(&self.state_data);
+            self.current_state = Some(n);            
+            return Ok((transition_output, state_output));
         };
         
         Err(StateMachineErrors::WrongTransition)
