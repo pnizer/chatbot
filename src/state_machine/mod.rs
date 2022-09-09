@@ -1,5 +1,6 @@
-use self::transitions::EmptyTransitionOutput;
 use std::{collections::HashMap};
+
+use self::transitions::EmptyTransitionOutput;
 
 pub mod transitions;
 pub mod state_output;

@@ -4,7 +4,7 @@ pub struct RegistrationsInMemory {
     registrations: Vec<Registration>,
 }
 impl RegistrationsInMemory {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { registrations: Vec::new() }
     }
 }
@@ -25,9 +25,9 @@ mod registrations_tests {
     #[test]
     fn registration_in_memory_should_add_registrations() {
         let mut registrations: Box<dyn Registrations> = Box::new(RegistrationsInMemory::new());
-        let registration_01 = Registration::new("Fulano One");
-        let registration_02 = Registration::new("Fulano Two");
-        let registration_03 = Registration::new("Fulano Three");
+        let registration_01 = Registration::new("Fulano One", "+55411");
+        let registration_02 = Registration::new("Fulano Two", "+55412");
+        let registration_03 = Registration::new("Fulano Three", "+55413");
         registrations.add(registration_01);
         registrations.add(registration_02);
         registrations.add(registration_03);
@@ -39,5 +39,4 @@ mod registrations_tests {
         assert_eq!("Fulano Two", &vec[1].name);
         assert_eq!("Fulano Three", &vec[2].name);
     }
-
 }
