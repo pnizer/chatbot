@@ -5,10 +5,10 @@ mod registrations;
 pub mod config;
 
 pub struct Registration {
-    id: String,
-    name: String,
-    phone: String,
-    created_on: DateTime<Utc>,
+    pub id: String,
+    pub name: String,
+    pub phone: String,
+    pub created_on: DateTime<Utc>,
 }
 impl Registration {
     pub fn new(name: &str, phone: &str) -> Self {

@@ -7,7 +7,6 @@ const MENU_STATE_NAME: &str = "menu";
 const REGISTE_STATE_NAME: &str = "register";
 const MENU_MESSAGE: &str = "1: Novo registro\n2: Lista de registros";
 const REGISTER_NAME_QUESTION: &str = "Qual o nome do registro?";
-const REGISTER_LIST: &str = "João Silva\nLucas Neto\nAvestruz de Oliveira";
 const INVALID_MENU_MESSAGE: &str = "Menu inválido!";
 
 pub fn build_chatbot_state_machine() -> ChatbotStateMachine {        
@@ -16,15 +15,21 @@ pub fn build_chatbot_state_machine() -> ChatbotStateMachine {
     chatbot
 }
 
-pub struct ChatbotStateMachine {
-    pub state_machine: StateMachine,
+pub struct Enviroment {
     registration_manager: Box<dyn RegistrationManager>,
+}
+
+pub struct ChatbotStateMachine {
+    pub state_machine: StateMachine<Enviroment>,
+    pub enviroment: Enviroment,
 }
 impl ChatbotStateMachine {
     pub fn new<R: RegistrationManager + 'static>(registration_manager: R) -> Self {
         Self {
             state_machine: StateMachine::new(""),
-            registration_manager: Box::new(registration_manager),
+            enviroment: Enviroment {
+                registration_manager: Box::new(registration_manager),
+            },
         }
     }
 
@@ -45,7 +50,16 @@ impl ChatbotStateMachine {
         let mut menu_state = State::new(MENU_STATE_NAME);
         menu_state.set_output(FixedStateOutput::new(MENU_MESSAGE));
         menu_state.add_transition(REGISTE_STATE_NAME, EqTransitionRule::new("1"));
-        menu_state.add_transition_with_output(MENU_STATE_NAME, EqTransitionRule::new("2"), FixedTransitionOutput::new(REGISTER_LIST));
+        menu_state.add_transition_with_output(MENU_STATE_NAME, EqTransitionRule::new("2"), FnTransitionOutput::new(
+            |_data, _action, env: &mut Enviroment| {
+                let registers = env.registration_manager.get_all_registrations();
+                let mut names = Vec::new();
+                for r in registers {
+                    names.push(r.name.clone());
+                }
+                Some(names.join("\n"))
+            }
+        ));
         menu_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new(INVALID_MENU_MESSAGE));
         self.state_machine.add_state(menu_state);
     }
@@ -53,9 +67,22 @@ impl ChatbotStateMachine {
     fn build_register_state(&mut self) {
         let mut register_state = State::new(REGISTE_STATE_NAME);
         register_state.set_output(FixedStateOutput::new(REGISTER_NAME_QUESTION));        
-        register_state.add_transition(MENU_STATE_NAME, DefaultTransitionRule::new());
+        register_state.add_transition(MENU_STATE_NAME, FnTransitionRule::new(
+            |_data, action, env: &mut Enviroment| {
+                match env.registration_manager.add(action, "+5541123") {
+                    Ok(_) => true,
+                    Err(_) => false,
+                }                
+            }
+        ));
+        register_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new("Erro ao cadastar!"));
         self.state_machine.add_state(register_state);
     }
+
+    pub fn transition_state(&mut self, action: &str) -> Result<(Option<String>, Option<String>), StateMachineErrors> {
+        self.state_machine.transition_state(action, &mut self.enviroment)
+    }
+
 }
 
 
@@ -67,18 +94,18 @@ mod chatbot_tests {
     fn chatbot_should_have_initial_message() -> Result<(), StateMachineErrors> {
         let mut chatbot = build_chatbot_state_machine();        
 
-        let response = chatbot.state_machine.transition_state("1")?;
+        let response = chatbot.transition_state("1")?;
 
         assert_eq!(MENU_MESSAGE, response.1.unwrap());
         Ok(())
     }
 
     #[test]
-    fn chatbot_should_ask_register_name() -> Result<(), StateMachineErrors> {
+    fn chatbot_should_ask_register_name() -> Result<(), StateMachineErrors> {        
         let mut chatbot = build_chatbot_state_machine();
         
-        chatbot.state_machine.transition_state("olá")?;
-        let response = chatbot.state_machine.transition_state("1")?;
+        chatbot.transition_state("olá")?;
+        let response = chatbot.transition_state("1")?;
 
         assert_eq!(REGISTER_NAME_QUESTION, response.1.unwrap());
         Ok(())
@@ -88,9 +115,9 @@ mod chatbot_tests {
     fn chatbot_should_back_to_menu_after_name_registered() -> Result<(), StateMachineErrors> {
         let mut chatbot = build_chatbot_state_machine();
         
-        chatbot.state_machine.transition_state("olá")?;
-        chatbot.state_machine.transition_state("1")?;
-        let response = chatbot.state_machine.transition_state("José Ricardo")?;
+        chatbot.transition_state("olá")?;
+        chatbot.transition_state("1")?;
+        let response = chatbot.transition_state("José Ricardo")?;
 
         assert_eq!(MENU_MESSAGE, response.1.unwrap());
         Ok(())
@@ -100,12 +127,38 @@ mod chatbot_tests {
     fn chatbot_should_show_register_list_after_back_to_menu() -> Result<(), StateMachineErrors> {
         let mut chatbot = build_chatbot_state_machine();
         
-        chatbot.state_machine.transition_state("olá")?;
-        chatbot.state_machine.transition_state("1")?;
-        chatbot.state_machine.transition_state("Fulano")?;
-        let response = chatbot.state_machine.transition_state("2")?;
+        chatbot.transition_state("olá")?;
+        chatbot.transition_state("1")?;
+        chatbot.transition_state("Fulano")?;
+        let response = chatbot.transition_state("2")?;
 
-        assert_eq!(REGISTER_LIST, response.0.unwrap());
+        assert_eq!("Fulano", response.0.unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn chatbot_should_show_empty_register_list() -> Result<(), StateMachineErrors> {
+        let mut chatbot = build_chatbot_state_machine();
+        
+        chatbot.transition_state("olá")?;
+        let response = chatbot.transition_state("2")?;
+
+        assert_eq!("", response.0.unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn chatbot_should_show_filled_register_list() -> Result<(), StateMachineErrors> {
+        let mut chatbot = build_chatbot_state_machine();
+        
+        chatbot.transition_state("olá")?;
+        chatbot.transition_state("1")?;
+        chatbot.transition_state("Fulano")?;
+        chatbot.transition_state("1")?;
+        chatbot.transition_state("Beltrano")?;
+        let response = chatbot.transition_state("2")?;
+
+        assert_eq!("Fulano\nBeltrano", response.0.unwrap());
         Ok(())
     }
 
@@ -113,8 +166,8 @@ mod chatbot_tests {
     fn chatbot_should_show_menu_on_invalid_command() -> Result<(), StateMachineErrors> {
         let mut chatbot = build_chatbot_state_machine();
         
-        chatbot.state_machine.transition_state("olá")?;
-        let response = chatbot.state_machine.transition_state("olá")?;         
+        chatbot.transition_state("olá")?;
+        let response = chatbot.transition_state("olá")?;         
 
         assert_eq!(MENU_MESSAGE, response.1.unwrap());
         Ok(())
