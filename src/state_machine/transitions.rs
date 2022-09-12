@@ -1,113 +1,95 @@
-use std::marker::PhantomData;
-
 use super::{TransitionOutput, TransitionRule};
 
-pub struct EqTransitionRule<E> {
-    value: String,
-    env_phantom: PhantomData<E>,
+pub struct EqTransitionRule {
+    value: String,    
 }
-impl <E> EqTransitionRule<E> {
+impl EqTransitionRule {
     pub fn new(value: &str) -> Self {
         Self {
             value: String::from(value),
-            env_phantom: PhantomData,
         }
     }
 }
-impl <E> TransitionRule<E> for EqTransitionRule<E> {
-    fn test(&self, _data: &str, action: &str, _env: &mut E) -> bool {
+impl TransitionRule for EqTransitionRule {
+    fn test(&self, _data: &str, action: &str) -> bool {
         action == &self.value
     }
 }
 
-pub struct DefaultTransitionRule<E> {
-    env_phantom: PhantomData<E>,
-}
-impl <E> DefaultTransitionRule<E> {
+pub struct DefaultTransitionRule;
+impl DefaultTransitionRule {
     pub fn new() -> Self {
-        Self {
-            env_phantom: PhantomData,
-        }
+        Self {}
     }
 }
-impl <E> TransitionRule<E> for DefaultTransitionRule<E> {
-    fn test(&self, _data: &str, _action: &str, _env: &mut E) -> bool {
+impl TransitionRule for DefaultTransitionRule {
+    fn test(&self, _data: &str, _action: &str) -> bool {
         true
     }
 }
 
-pub struct FnTransitionRule<F, E>
-where F: Fn(&str, &str, &mut E) -> bool {
-    rule: F,
-    env_phantom: PhantomData<E>,
+pub struct FnTransitionRule<F>
+where F: Fn(&str, &str) -> bool {
+    rule: F,    
 }
-impl <F, E> FnTransitionRule<F, E>
-where F: Fn(&str, &str, &mut E) -> bool {
+impl <F> FnTransitionRule<F>
+where F: Fn(&str, &str) -> bool {
     pub fn new(rule: F) -> Self {
         Self {
             rule,
-            env_phantom: PhantomData,
         }
     }
 }
-impl <F, E> TransitionRule<E> for FnTransitionRule<F, E>
-where F: Fn(&str, &str, &mut E) -> bool {
-    fn test(&self, data: &str, action: &str, env: &mut E) -> bool {
-        (&self.rule)(data, action, env)
+impl <F> TransitionRule for FnTransitionRule<F>
+where F: Fn(&str, &str) -> bool {
+    fn test(&self, data: &str, action: &str) -> bool {
+        (&self.rule)(data, action)
     }
 }
 
-pub struct EmptyTransitionOutput<E> {
-    env_phantom: PhantomData<E>,
-}
-impl <E> EmptyTransitionOutput<E> {
+pub struct EmptyTransitionOutput;
+impl EmptyTransitionOutput {
     pub fn new() -> Self {
-        Self {
-            env_phantom: PhantomData,
-        }
+        Self {}
     }
 }
-impl <E> TransitionOutput<E> for EmptyTransitionOutput<E> {
-    fn generate_output(&self, _data: &str, _action: &str, _env: &mut E) -> Option<String> {
+impl TransitionOutput for EmptyTransitionOutput {
+    fn generate_output(&self, _data: &str, _action: &str) -> Option<String> {
         None
     }
 }
 
-pub struct FixedTransitionOutput<E> {
-    output: String,
-    env_phantom: PhantomData<E>,
+pub struct FixedTransitionOutput {
+    output: String,    
 }
-impl <E> FixedTransitionOutput<E> {
+impl FixedTransitionOutput {
     pub fn new(output: &str) -> Self {
         Self {
             output: String::from(output),
-            env_phantom: PhantomData,
         }
     }
 }
-impl <E> TransitionOutput<E> for FixedTransitionOutput<E> {
-    fn generate_output(&self, _data: &str, _action: &str, _env: &mut E) -> Option<String> {
+impl TransitionOutput for FixedTransitionOutput {
+    fn generate_output(&self, _data: &str, _action: &str) -> Option<String> {
         Some(String::from(&self.output))
     }
 }
 
-pub struct FnTransitionOutput<F, E>
-where F: Fn(&str, &str, &mut E) -> Option<String> {
+pub struct FnTransitionOutput<F>
+where F: Fn(&str, &str) -> Option<String> {
     rule: F,
-    env_phantom: PhantomData<E>,
 }
-impl <F, E> FnTransitionOutput<F, E>
-where F: Fn(&str, &str, &mut E) -> Option<String> {
+impl <F> FnTransitionOutput<F>
+where F: Fn(&str, &str) -> Option<String> {
     pub fn new(rule: F) -> Self {
         Self {
             rule,
-            env_phantom: PhantomData,
         }
     }
 }
-impl <F, E> TransitionOutput<E> for FnTransitionOutput<F, E>
-where F: Fn(&str, &str, &mut E) -> Option<String> {
-    fn generate_output(&self, data: &str, action: &str, env: &mut E) -> Option<String> {
-        (&self.rule)(data, action, env)
+impl <F> TransitionOutput for FnTransitionOutput<F>
+where F: Fn(&str, &str) -> Option<String> {
+    fn generate_output(&self, data: &str, action: &str) -> Option<String> {
+        (&self.rule)(data, action)
     }
 }

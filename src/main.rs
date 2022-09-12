@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use chatbot::build_chatbot_state_machine;
+use context::ApplicationContext;
 use std::{io::{self, BufRead, Error}};
 
 mod whatsapp_messages;
@@ -7,10 +8,12 @@ mod messages;
 mod state_machine;
 mod chatbot;
 mod registration;
+mod context;
 mod test;
 
 fn main() -> Result<(), Error> {
-    let mut chatbot = build_chatbot_state_machine();
+    let application_context = ApplicationContext::build();
+    let mut chatbot = build_chatbot_state_machine(&application_context);
     let stdin = io::stdin();    
     for line_result in stdin.lock().lines() {
         let line = line_result?;

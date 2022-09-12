@@ -1,9 +1,12 @@
+use std::{sync::Arc, cell::RefCell};
+
 use chrono::{Utc, DateTime};
 use uuid::Uuid;
 
 mod registrations;
-pub mod config;
+pub mod context;
 
+#[derive(Clone)]
 pub struct Registration {
     pub id: String,
     pub name: String,
@@ -28,33 +31,33 @@ pub enum RegistrationManagerError {
 
 pub trait RegistrationManager {
     fn add(&mut self, name: &str, phone: &str) -> Result<(), RegistrationManagerError>;
-    fn get_all_registrations(&self) -> &Vec<Registration>;
+    fn get_all_registrations(&self) -> Vec<Registration>;
 }
 
 struct RegistrationManagerImpl {
-    registrations: Box<dyn Registrations>,
+    registrations: Arc<RefCell<dyn Registrations>>,
 }
 impl RegistrationManagerImpl {
-    fn new<R: Registrations + 'static>(registrations: R) -> Self {
+    fn new(registrations: Arc<RefCell<dyn Registrations>>) -> Self {
         Self {
-            registrations: Box::from(registrations),
+            registrations,
         }
     }
 }
 impl RegistrationManager for RegistrationManagerImpl {
     fn add(&mut self, name: &str, phone: &str) -> Result<(), RegistrationManagerError> {
         let registration = Registration::new(name, phone);        
-        self.registrations.add(registration);
+        self.registrations.borrow_mut().add(registration);
         Ok(())
     }
 
-    fn get_all_registrations(&self) -> &Vec<Registration> {
-        self.registrations.all_registrations()
+    fn get_all_registrations(&self) -> Vec<Registration> {
+        self.registrations.borrow().all_registrations()
     }
 }
 
 trait Registrations {
-    fn all_registrations(&self) -> &Vec<Registration>;
+    fn all_registrations(&self) -> Vec<Registration>;
     fn add(&mut self, registration: Registration);    
 }
 
@@ -77,13 +80,13 @@ mod registration_tests {
 
     #[test]
     fn registration_manager_impl_should_add_new_register() -> Result<(), RegistrationManagerError> {
-        let mut registration_manager = RegistrationManagerImpl::new(RegistrationsInMemory::new());
+        let mut registration_manager = RegistrationManagerImpl::new(Arc::new(RefCell::new(RegistrationsInMemory::new())));
         let name = "Fulano de Tal";
         let phone = "+5541123";
         
         registration_manager.add(name, phone)?;
 
-        let all_registrations: &Vec<Registration> = registration_manager.get_all_registrations();
+        let all_registrations: Vec<Registration> = registration_manager.get_all_registrations();
         assert_eq!(1, all_registrations.len());
         Ok(())
     }

@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{rc::Rc, cell::RefCell};
 
 struct MyService {
     name: String,
@@ -26,64 +26,61 @@ impl MyService {
     }
 }
 
-trait Command<S> {
-    fn execute(&self, env: &mut S);
+trait Command {
+    fn execute(&self);
 }
 
-struct PrintCommand {}
+struct PrintCommand {
+    my_service: Rc<RefCell<MyService>>,
+}
 impl PrintCommand {
-    fn new() -> Self {
-        Self {}
+    fn new(my_service: Rc<RefCell<MyService>>) -> Self {
+        Self {
+            my_service,
+        }
     }
 }
-impl Command<Environment> for PrintCommand {
-    fn execute(&self, env: &mut Environment) {
-        env.my_service.general_function();
+impl Command for PrintCommand {
+    fn execute(&self) {
+        let mut my_service = self.my_service.borrow_mut();
+        my_service.general_function();
     }
 }
 
-struct FooCommand {}
+struct FooCommand {
+    my_service: Rc<RefCell<MyService>>,
+}
 impl FooCommand {
-    fn new() -> Self {
-        Self {}
+    fn new(my_service: Rc<RefCell<MyService>>) -> Self {
+        Self {
+            my_service,
+        }
     }
 }
-impl Command<Environment> for FooCommand {
-    fn execute(&self, env: &mut Environment) {
-        env.my_service.foo_function();
+impl Command for FooCommand {
+    fn execute(&self) {
+        let mut my_service = self.my_service.borrow_mut();
+        my_service.foo_function();
     }
 }
 
-struct CommandsSequence<S> {
-    commands: Vec<Box<dyn Command<S>>>,
-    phantom: PhantomData<S>,
+struct CommandsSequence {
+    commands: Vec<Box<dyn Command>>,    
 }
-impl<S> CommandsSequence<S> {
+impl CommandsSequence {
     fn new() -> Self {
         Self {
-            commands: Vec::new(),
-            phantom: PhantomData,
+            commands: Vec::new(),    
         }
     }
 
-    fn add_command<C: Command<S> + 'static>(&mut self, command: C) {
+    fn add_command<C: Command + 'static>(&mut self, command: C) {
         self.commands.push(Box::new(command));
     }
 
-    fn execute_all(&self, my_service: &mut S) {
+    fn execute_all(&self) {
         for cmd in &self.commands {
-            cmd.execute(my_service);
-        }
-    }
-}
-
-struct Environment {
-    my_service: MyService,
-}
-impl Environment {
-    fn new(my_service: MyService) -> Self {
-        Self {
-            my_service,
+            cmd.execute();
         }
     }
 }
@@ -94,17 +91,16 @@ mod test_test {
 
     #[test]
     fn my_test() {
-        let service = MyService::new("foo service");
-        let mut env = Environment::new(service);
+        let service = Rc::new(RefCell::new(MyService::new("foo service")));        
 
         let mut seq = CommandsSequence::new();  
-        seq.add_command(PrintCommand::new());
-        seq.add_command(PrintCommand::new());
-        seq.add_command(FooCommand::new());
-        seq.add_command(PrintCommand::new());
+        seq.add_command(PrintCommand::new(service.clone()));
+        seq.add_command(PrintCommand::new(service.clone()));
+        seq.add_command(FooCommand::new(service.clone()));
+        seq.add_command(PrintCommand::new(service.clone()));
 
-        seq.execute_all(&mut env);
+        seq.execute_all();
 
-        env.my_service.print_output();        
+        service.borrow().print_output();
     }
 }

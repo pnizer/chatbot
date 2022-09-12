@@ -1,21 +1,17 @@
-use std::marker::PhantomData;
-
 use super::StateOutput;
 
-pub struct FixedStateOutput<E> {
+pub struct FixedStateOutput {
     output: String,
-    env_phantom: PhantomData<E>,
 }
-impl <E> FixedStateOutput<E> {
+impl FixedStateOutput {
     pub fn new(output: &str) -> Self {
         Self {
             output: String::from(output),
-            env_phantom: PhantomData,
         }
     }
 }
-impl <E> StateOutput<E> for FixedStateOutput<E> {
-    fn generate_output(&self, _data: &str, _env: &mut E) -> Option<String> {
+impl StateOutput for FixedStateOutput {
+    fn generate_output(&self, _data: &str) -> Option<String> {
         Some(String::from(&self.output))
     }
 }

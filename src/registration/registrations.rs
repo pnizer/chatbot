@@ -9,8 +9,8 @@ impl RegistrationsInMemory {
     }
 }
 impl Registrations for RegistrationsInMemory {
-    fn all_registrations(&self) -> &Vec<Registration> {
-        &self.registrations
+    fn all_registrations(&self) -> Vec<Registration> {
+        self.registrations.clone()
     }
 
     fn add(&mut self, registration: Registration) {
