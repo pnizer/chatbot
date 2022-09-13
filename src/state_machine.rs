@@ -101,15 +101,11 @@ impl StateMachine
         self.states.get(name)
     }
 
-    pub fn set_initial_state_name(&mut self, name: &str) -> Result<(), StateMachineErrors> {
-        let state = self.states.get(name);        
-        if state.is_some() {
-            self.initial_state_name = Some(String::from(name));
-            self.current_state = Some(String::from(name));
-            Ok(())
-        } else {
-            Err(StateMachineErrors::StateNotFound)
-        }
+    pub fn set_initial_state_name(&mut self, state_name: &str) -> Result<(), StateMachineErrors> {
+        self.states.get(state_name).ok_or(StateMachineErrors::StateNotFound)?;
+        self.initial_state_name = Some(String::from(state_name));
+        self.current_state = Some(String::from(state_name));
+        Ok(())
     }
 
     fn get_initial_state(&self) -> Option<&State> {
@@ -117,6 +113,16 @@ impl StateMachine
             Some(name) => self.states.get(name),
             None => None
         }
+    }
+
+    pub fn set_current_state(&mut self, state_name: &str) -> Result<(), StateMachineErrors> {
+        self.states.get(state_name).ok_or(StateMachineErrors::StateNotFound)?;
+        self.current_state = Some(state_name.to_string());
+        Ok(())
+    }
+
+    pub fn get_current_state(&self) -> Option<String> {
+        self.current_state.clone()
     }
 
     pub fn transition_state(&mut self, action: &str) -> Result<(Option<String>, Option<String>), StateMachineErrors> {    

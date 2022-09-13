@@ -1,29 +1,32 @@
-use std::{rc::Rc, sync::mpsc, thread};
+pub mod context;
 
-#[derive(Debug)]
-struct TelegramMessageArrived {
-    from: String,
-    message_id: i64,
-    chat_id: i64,
-    text: String,
+use std::{sync::{mpsc, Arc}, thread};
+
+#[derive(Debug, Clone)]
+pub struct TelegramMessageArrived {
+    pub from: String,
+    pub message_id: i64,
+    pub chat_id: i64,
+    pub text: String,
 }
 
-struct SendTelegramMessage {
-    chat_id: i64,
-    text: String,
+pub struct SendTelegramMessage {
+    pub chat_id: i64,
+    pub text: String,
 }
 
-trait TelegramListener {
-    fn message_arrived(&self, message: &TelegramMessageArrived);
+pub trait TelegramListener {
+    fn message_arrived(&self, message: TelegramMessageArrived);
 }
 
-trait TelegramReceiver {
-    fn add_message_arrived_listener(&mut self, listener: Rc<dyn TelegramListener>);
+pub trait TelegramReceiver {
+    fn add_message_arrived_listener(&mut self, listener: Arc<dyn TelegramListener>);
+    fn start_receive(&self);
 }
 
 struct LongPollingTelegramReceiver {
     token: String,
-    listeners: Vec<Rc<dyn TelegramListener>>,
+    listeners: Vec<Arc<dyn TelegramListener>>,
 }
 impl LongPollingTelegramReceiver {
     fn new(token: &str) -> Self {
@@ -69,19 +72,23 @@ impl LongPollingTelegramReceiver {
                     
         for message in rx {
             for listener in &self.listeners {
-                listener.message_arrived(&message);
+                listener.message_arrived(message.clone());
             }
             println!("{:?}", message);
         }
     }
 }
 impl TelegramReceiver for LongPollingTelegramReceiver {
-    fn add_message_arrived_listener(&mut self, listener: Rc<dyn TelegramListener>) {
+    fn add_message_arrived_listener(&mut self, listener: Arc<dyn TelegramListener>) {
         self.listeners.push(listener);
+    }
+
+    fn start_receive(&self) {
+        self.poll_messages();
     }
 }
 
-trait TelegramSender {
+pub trait TelegramSender {
     fn send_message(&self, message: SendTelegramMessage);
 }
 struct TelegramSenderImpl {
@@ -101,27 +108,5 @@ impl TelegramSender for TelegramSenderImpl {
         let url = format!("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}", &self.token, chat_id, text);
         let status = reqwest::blocking::get(url).unwrap().status();
         println!("{}", status);
-    }
-}
-
-#[cfg(test)]
-mod telegram_test {
-    use std::env;
-
-    use super::*;
-
-    #[test]
-    fn telegram_should_longpoll_get_updates() {
-        let token = env::var("TELEGRAM_BOT_TOKEN").unwrap();
-        // let receiver = LongPollingTelegramReceiver::new();
-        // receiver.poll_messages();
-
-        let sender = TelegramSenderImpl::new(&token);
-        let message = SendTelegramMessage {
-            chat_id: 851269483,
-            text: "Hey Ho!".to_string(),
-        };
-
-        sender.send_message(message);
     }
 }

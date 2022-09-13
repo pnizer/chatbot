@@ -1,3 +1,6 @@
+pub mod chat_state;
+pub mod context;
+
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -12,7 +15,8 @@ const REGISTER_NAME_QUESTION: &str = "Qual o nome do registro?";
 const INVALID_MENU_MESSAGE: &str = "Menu inválido!";
 
 pub fn build_chatbot_state_machine(application_context: &ApplicationContext) -> ChatbotStateMachine {        
-    let mut chatbot = ChatbotStateMachine::new(application_context.registration_context.registration_manager.clone());
+    let registration_manager = application_context.registration_context.registration_manager.clone();
+    let mut chatbot = ChatbotStateMachine::new(registration_manager);
     chatbot.init();
     chatbot
 }
@@ -81,6 +85,14 @@ impl ChatbotStateMachine {
 
     pub fn transition_state(&mut self, action: &str) -> Result<(Option<String>, Option<String>), StateMachineErrors> {
         self.state_machine.transition_state(action)
+    }
+
+    pub fn get_current_state(&self) -> Option<String> {
+        self.state_machine.get_current_state()
+    }
+
+    pub fn set_current_state(&mut self, state_name: &str) -> Result<(), StateMachineErrors>{
+        self.state_machine.set_current_state(state_name)
     }
 
 }
