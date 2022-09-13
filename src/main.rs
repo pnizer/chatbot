@@ -3,8 +3,7 @@ use chatbot::build_chatbot_state_machine;
 use context::ApplicationContext;
 use std::{io::{self, BufRead, Error}};
 
-mod whatsapp_messages;
-mod messages;
+mod telegram;
 mod state_machine;
 mod chatbot;
 mod registration;
