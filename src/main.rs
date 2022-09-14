@@ -15,6 +15,7 @@ mod test;
 
 fn main() {
     run_telegram_bot();
+    // run_terminal_bot().unwrap();
 }
 
 fn run_telegram_bot() {

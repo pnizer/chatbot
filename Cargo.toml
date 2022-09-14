@@ -13,6 +13,7 @@ chrono = "0.4.22"
 serde_json = "1.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 mockall = "0.11.2"
+urlencoding = "2.1.2"
 
 [dependencies.uuid]
 version = "1.1.2"

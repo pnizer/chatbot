@@ -187,6 +187,7 @@ mod chatbot_tests {
         chatbot.transition_state("olá")?;
         let response = chatbot.transition_state("olá")?;         
 
+        assert_eq!(INVALID_MENU_MESSAGE, response.0.unwrap());
         assert_eq!(MENU_MESSAGE, response.1.unwrap());
         Ok(())
     }

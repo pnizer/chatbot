@@ -6,7 +6,7 @@ use mockall::automock;
 
 #[derive(Debug, Clone)]
 pub struct TelegramMessageArrived {
-    pub from: String,
+    pub from: Option<String>,
     pub message_id: i64,
     pub chat_id: i64,
     pub text: String,
@@ -45,7 +45,7 @@ impl LongPollingTelegramReceiver {
             let mut last_offset: Option<i64> = None;
             loop {
                 println!("GetUpdate...");
-                let timeout = 10;
+                let timeout = 15;
                 let offset = match last_offset {
                     Some(n) => (n + 1).to_string(),
                     None => "".to_string()
@@ -59,8 +59,12 @@ impl LongPollingTelegramReceiver {
                     last_offset = Some(result["update_id"].as_i64().unwrap());
                     
                     if result["message"].is_object() {
+                        let username = match result["message"]["from"]["username"].as_str() {
+                            Some(name) => Some(String::from(name)),
+                            None => None
+                        };
                         let message = TelegramMessageArrived {
-                            from: String::from(result["message"]["from"]["username"].as_str().unwrap()),
+                            from: username,
                             message_id: result["message"]["message_id"].as_i64().unwrap(),
                             chat_id: result["message"]["chat"]["id"].as_i64().unwrap(),
                             text: String::from(result["message"]["text"].as_str().unwrap()),
@@ -108,8 +112,19 @@ impl TelegramSender for TelegramSenderImpl {
     fn send_message(&self, message: SendTelegramMessage) {
         let chat_id = message.chat_id;        
         let text = &message.text;
-        let url = format!("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}", &self.token, chat_id, text);
-        let status = reqwest::blocking::get(url).unwrap().status();
+        let url = format!("https://api.telegram.org/bot{}/sendMessage?chat_id={}&text={}",
+            &self.token, 
+            chat_id, 
+            urlencoding::encode(text),
+        );
+
+        let result = reqwest::blocking::get(url).unwrap();
+        let status = result.status();
         println!("{}", status);
+        if !status.is_success() {            
+            if let Ok(json) = result.json::<serde_json::Value>() {
+                println!("{:?}", json);
+            }    
+        }        
     }
 }

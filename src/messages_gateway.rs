@@ -142,7 +142,7 @@ mod messages_gateway_tests {
             .withf(|chat_id| chat_id == "111000")
             .return_once(move |_| None);        
         let telegram_message = TelegramMessageArrived {
-            from: "userName".to_string(),
+            from: Some("userName".to_string()),
             message_id: 111000,
             chat_id: 111000,
             text: "1".to_string(),
@@ -160,7 +160,7 @@ mod messages_gateway_tests {
         scope.state_machine_builder.expect_build().return_once(build_state_machine);
         scope.mock_states.expect_get().return_once(move |_| None);
         let telegram_message = TelegramMessageArrived {
-            from: "userName".to_string(),
+            from: Some("userName".to_string()),
             message_id: 111000,
             chat_id: 111000,
             text: "1".to_string(),
@@ -175,12 +175,12 @@ mod messages_gateway_tests {
     }    
 
     #[test]
-    fn message_gateway_should_send_telegram_message_with_response() {
+    fn message_gateway_should_send_telegram_message_with_state_output() {
         let mut scope = TestScope::new();
         scope.state_machine_builder.expect_build().return_once(build_state_machine);
         scope.mock_states.expect_get().return_once(move |_| None);        
         let telegram_message = TelegramMessageArrived {
-            from: "userName".to_string(),
+            from: Some("userName".to_string()),
             message_id: 111000,
             chat_id: 111000,
             text: "1".to_string(),
@@ -189,6 +189,32 @@ mod messages_gateway_tests {
             .withf(|message| message.chat_id == 111000 && message.text == "this is state 2!")
             .return_const(());
         scope.mock_states.expect_change_state().return_const(());
+        let message_gateway = scope.build_object();
+
+        <dyn TelegramListener>::message_arrived(&message_gateway, telegram_message);
+    }    
+
+    #[test]
+    fn message_gateway_should_send_telegram_message_with_state_and_transition_output() {
+        let mut scope = TestScope::new();
+        let chat_state = ChatState {
+            current_state: String::from("state-2"),
+        };
+        scope.mock_states.expect_get().return_once(move |_| Some(chat_state));        
+        scope.state_machine_builder.expect_build().return_once(build_state_machine);
+        let telegram_message = TelegramMessageArrived {
+            from: Some("userName".to_string()),
+            message_id: 111000,
+            chat_id: 111000,
+            text: "1".to_string(),
+        };
+        scope.mock_telegram_sender.expect_send_message()
+            .withf(|message| message.chat_id == 111000 && message.text == "invalid option")
+            .return_const(());
+        scope.mock_telegram_sender.expect_send_message()
+            .withf(|message| message.chat_id == 111000 && message.text == "this is state 2!")
+            .return_const(());
+            scope.mock_states.expect_change_state().return_const(());
         let message_gateway = scope.build_object();
 
         <dyn TelegramListener>::message_arrived(&message_gateway, telegram_message);
@@ -205,7 +231,7 @@ mod messages_gateway_tests {
             .withf(|chat_id| chat_id == "111000")
             .return_once(move |_| Some(chat_state));        
         let telegram_message = TelegramMessageArrived {
-            from: "userName".to_string(),
+            from: Some("userName".to_string()),
             message_id: 111000,
             chat_id: 111000,
             text: "2".to_string(),
