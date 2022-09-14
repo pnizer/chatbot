@@ -1,7 +1,7 @@
 #![allow(dead_code)]
-use chatbot::build_chatbot_state_machine;
+use chatbot::ChatbotBuilder;
 use context::ApplicationContext;
-use messages_gateway::MessagesGateway;
+use messages_gateway::{MessagesGateway, StateMachineBuilder};
 use telegram::TelegramReceiver;
 use std::{io::{self, BufRead, Error}, sync::Arc};
 
@@ -14,12 +14,18 @@ mod messages_gateway;
 mod test;
 
 fn main() {
+    run_telegram_bot();
+}
+
+fn run_telegram_bot() {
     let application_context = ApplicationContext::build();
 
     let message_gateway = Arc::new(MessagesGateway::new(
-        application_context.chatbot_context.states.clone(),
-        application_context.registration_context.registration_manager.clone(),
-        application_context.telegram_context.telegram_sender.clone(),        
+        application_context.messages_gateway_context.states.clone(),
+        application_context.telegram_context.telegram_sender.clone(),
+        Box::new(ChatbotBuilder::new(
+            application_context.registration_context.registration_manager.clone())
+        ),
     ));
 
     let mut receiver = application_context.telegram_context.new_telegram_receiver();
@@ -29,7 +35,10 @@ fn main() {
 
 fn run_terminal_bot() -> Result<(), Error> {
     let application_context = ApplicationContext::build();
-    let mut chatbot = build_chatbot_state_machine(&application_context);
+    let chatbot_builder = ChatbotBuilder::new(
+        application_context.registration_context.registration_manager.clone()
+    );
+    let mut chatbot = chatbot_builder.build();
     let stdin = io::stdin();    
     for line_result in stdin.lock().lines() {
         let line = line_result?;

@@ -2,10 +2,10 @@ use std::{sync::Arc, cell::RefCell};
 
 use super::chat_state::*;
 
-pub struct ChatbotContext {    
+pub struct MessagesGatewayContext {    
     pub states: Arc<RefCell<dyn States>>,
 }
-impl ChatbotContext {
+impl MessagesGatewayContext {
     pub fn build() -> Self {
         let states = Arc::new(RefCell::new(Self::build_states()));
 

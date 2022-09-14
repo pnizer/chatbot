@@ -1,10 +1,9 @@
-pub mod chat_state;
-pub mod context;
-
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use super::{registration::RegistrationManager, context::ApplicationContext};
+use crate::messages_gateway::StateMachineBuilder;
+
+use super::{registration::RegistrationManager};
 use super::{state_machine::*, state_machine::transitions::*, state_machine::state_output::*};
 
 const INITIAL_STATE_NAME: &str = "start";
@@ -14,39 +13,33 @@ const MENU_MESSAGE: &str = "1: Novo registro\n2: Lista de registros";
 const REGISTER_NAME_QUESTION: &str = "Qual o nome do registro?";
 const INVALID_MENU_MESSAGE: &str = "Menu inválido!";
 
-pub fn build_chatbot_state_machine(application_context: &ApplicationContext) -> ChatbotStateMachine {        
-    let registration_manager = application_context.registration_context.registration_manager.clone();
-    let mut chatbot = ChatbotStateMachine::new(registration_manager);
-    chatbot.init();
-    chatbot
-}
-
-pub struct ChatbotStateMachine {
-    pub state_machine: StateMachine,
+pub struct ChatbotBuilder {
     registration_manager: Arc<RefCell<dyn RegistrationManager>>,
 }
-impl ChatbotStateMachine {
+impl StateMachineBuilder for ChatbotBuilder {
+    fn build(&self) -> StateMachine {
+        let mut state_machine = StateMachine::new("chat-bot");
+        self.build_initial_state(&mut state_machine);
+        self.build_menu_state(&mut state_machine);
+        self.build_register_state(&mut state_machine);
+        state_machine
+    }
+}
+impl ChatbotBuilder {
     pub fn new(registration_manager: Arc<RefCell<dyn RegistrationManager>>) -> Self {
         Self {
-            state_machine: StateMachine::new(""),
             registration_manager,
         }
     }
 
-    pub fn init(&mut self) {
-        self.build_initial_state();
-        self.build_menu_state();
-        self.build_register_state();
-    }
-    
-    fn build_initial_state(&mut self) {
+    fn build_initial_state(&self, state_machine: &mut StateMachine) {
         let mut initial_state = State::new(INITIAL_STATE_NAME);
         initial_state.add_transition(MENU_STATE_NAME, DefaultTransitionRule::new());
-        self.state_machine.add_state(initial_state);
-        self.state_machine.set_initial_state_name(INITIAL_STATE_NAME).unwrap();
+        state_machine.add_state(initial_state);
+        state_machine.set_initial_state_name(INITIAL_STATE_NAME).unwrap();
     }
 
-    fn build_menu_state(&mut self) {
+    fn build_menu_state(&self, state_machine: &mut StateMachine) {
         let mut menu_state = State::new(MENU_STATE_NAME);
         menu_state.set_output(FixedStateOutput::new(MENU_MESSAGE));
         menu_state.add_transition(REGISTE_STATE_NAME, EqTransitionRule::new("1"));
@@ -63,10 +56,10 @@ impl ChatbotStateMachine {
             }
         ));        
         menu_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new(INVALID_MENU_MESSAGE));
-        self.state_machine.add_state(menu_state);
+        state_machine.add_state(menu_state);
     }
 
-    fn build_register_state(&mut self) {
+    fn build_register_state(&self, state_machine: &mut StateMachine) {
         let mut register_state = State::new(REGISTE_STATE_NAME);
         register_state.set_output(FixedStateOutput::new(REGISTER_NAME_QUESTION));        
         let registration_manager_arc = self.registration_manager.clone();
@@ -80,32 +73,21 @@ impl ChatbotStateMachine {
             }
         ));
         register_state.add_transition_with_output(MENU_STATE_NAME, DefaultTransitionRule::new(), FixedTransitionOutput::new("Erro ao cadastar!"));
-        self.state_machine.add_state(register_state);
+        state_machine.add_state(register_state);
     }
-
-    pub fn transition_state(&mut self, action: &str) -> Result<(Option<String>, Option<String>), StateMachineErrors> {
-        self.state_machine.transition_state(action)
-    }
-
-    pub fn get_current_state(&self) -> Option<String> {
-        self.state_machine.get_current_state()
-    }
-
-    pub fn set_current_state(&mut self, state_name: &str) -> Result<(), StateMachineErrors>{
-        self.state_machine.set_current_state(state_name)
-    }
-
 }
-
 
 #[cfg(test)]
 mod chatbot_tests {
+    use crate::registration::{MockRegistrationManager, Registration};
+
     use super::*;
 
     #[test]
     fn chatbot_should_have_initial_message() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let registration_manager = MockRegistrationManager::new();
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
 
         let response = chatbot.transition_state("1")?;
 
@@ -115,8 +97,9 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_ask_register_name() -> Result<(), StateMachineErrors> {        
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let registration_manager = MockRegistrationManager::new();
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
         let response = chatbot.transition_state("1")?;
@@ -127,8 +110,12 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_back_to_menu_after_name_registered() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let mut registration_manager = MockRegistrationManager::new();
+        registration_manager.expect_add()
+            .withf(|name, _phone| name == "José Ricardo")
+            .return_once(|_,_| Ok(()));
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
         chatbot.transition_state("1")?;
@@ -140,8 +127,14 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_show_register_list_after_back_to_menu() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let mut registration_manager = MockRegistrationManager::new();
+        registration_manager.expect_add()
+            .withf(|name, _phone| name == "Fulano")
+            .return_once(|_,_| Ok(()));        
+        registration_manager.expect_get_all_registrations()            
+            .return_once(move || Vec::from([Registration::new("Fulano", "+5541123")]));
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
         chatbot.transition_state("1")?;
@@ -154,8 +147,11 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_show_empty_register_list() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let mut registration_manager = MockRegistrationManager::new();
+        registration_manager.expect_get_all_registrations()            
+            .return_once(move || Vec::new());
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
         let response = chatbot.transition_state("2")?;
@@ -166,14 +162,16 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_show_filled_register_list() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let mut registration_manager = MockRegistrationManager::new();
+        registration_manager.expect_get_all_registrations()            
+            .return_once(move || Vec::from([
+                Registration::new("Fulano", "+5541123"),
+                Registration::new("Beltrano", "+5542223"),
+            ]));
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
-        chatbot.transition_state("1")?;
-        chatbot.transition_state("Fulano")?;
-        chatbot.transition_state("1")?;
-        chatbot.transition_state("Beltrano")?;
         let response = chatbot.transition_state("2")?;
 
         assert_eq!("Fulano\nBeltrano", response.0.unwrap());
@@ -182,8 +180,9 @@ mod chatbot_tests {
 
     #[test]
     fn chatbot_should_show_menu_on_invalid_command() -> Result<(), StateMachineErrors> {
-        let application_context = ApplicationContext::build();
-        let mut chatbot = build_chatbot_state_machine(&application_context);        
+        let registration_manager = MockRegistrationManager::new();
+        let chatbot_builder = ChatbotBuilder::new(Arc::new(RefCell::new(registration_manager)));
+        let mut chatbot = chatbot_builder.build();        
         
         chatbot.transition_state("olá")?;
         let response = chatbot.transition_state("olá")?;         
