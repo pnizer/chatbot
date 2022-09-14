@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
+use mockall::automock;
+
 #[derive(Debug, Clone)]
 pub struct ChatState {
     pub current_state: String,
 }
 
+#[automock]
 pub trait States {
     fn get(&self, chat_id: &str) -> Option<ChatState>;
     fn change_state(&mut self, chat_id: &str, state: ChatState);

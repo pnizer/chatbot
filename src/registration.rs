@@ -1,6 +1,7 @@
 use std::{sync::Arc, cell::RefCell};
 
 use chrono::{Utc, DateTime};
+use mockall::automock;
 use uuid::Uuid;
 
 mod registrations;
@@ -29,6 +30,7 @@ pub enum RegistrationManagerError {
     DuplicatedRegistration,    
 }
 
+#[automock]
 pub trait RegistrationManager {
     fn add(&mut self, name: &str, phone: &str) -> Result<(), RegistrationManagerError>;
     fn get_all_registrations(&self) -> Vec<Registration>;

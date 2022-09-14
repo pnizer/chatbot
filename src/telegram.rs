@@ -2,6 +2,8 @@ pub mod context;
 
 use std::{sync::{mpsc, Arc}, thread};
 
+use mockall::automock;
+
 #[derive(Debug, Clone)]
 pub struct TelegramMessageArrived {
     pub from: String,
@@ -88,6 +90,7 @@ impl TelegramReceiver for LongPollingTelegramReceiver {
     }
 }
 
+#[automock]
 pub trait TelegramSender {
     fn send_message(&self, message: SendTelegramMessage);
 }
