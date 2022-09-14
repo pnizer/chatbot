@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{TransitionOutput, TransitionRule};
 
 pub struct EqTransitionRule {
@@ -11,7 +13,7 @@ impl EqTransitionRule {
     }
 }
 impl TransitionRule for EqTransitionRule {
-    fn test(&self, _data: &str, action: &str) -> bool {
+    fn test(&self, _data: &mut HashMap<String, String>, action: &str) -> bool {
         action == &self.value
     }
 }
@@ -23,17 +25,17 @@ impl DefaultTransitionRule {
     }
 }
 impl TransitionRule for DefaultTransitionRule {
-    fn test(&self, _data: &str, _action: &str) -> bool {
+    fn test(&self, _data: &mut HashMap<String, String>, _action: &str) -> bool {
         true
     }
 }
 
 pub struct FnTransitionRule<F>
-where F: Fn(&str, &str) -> bool {
+where F: Fn(&mut HashMap<String, String>, &str) -> bool {
     rule: F,    
 }
 impl <F> FnTransitionRule<F>
-where F: Fn(&str, &str) -> bool {
+where F: Fn(&mut HashMap<String, String>, &str) -> bool {
     pub fn new(rule: F) -> Self {
         Self {
             rule,
@@ -41,8 +43,8 @@ where F: Fn(&str, &str) -> bool {
     }
 }
 impl <F> TransitionRule for FnTransitionRule<F>
-where F: Fn(&str, &str) -> bool {
-    fn test(&self, data: &str, action: &str) -> bool {
+where F: Fn(&mut HashMap<String, String>, &str) -> bool {
+    fn test(&self, data: &mut HashMap<String, String>, action: &str) -> bool {
         (&self.rule)(data, action)
     }
 }
@@ -54,7 +56,7 @@ impl EmptyTransitionOutput {
     }
 }
 impl TransitionOutput for EmptyTransitionOutput {
-    fn generate_output(&self, _data: &str, _action: &str) -> Option<String> {
+    fn generate_output(&self, _data: &mut HashMap<String, String>, _action: &str) -> Option<String> {
         None
     }
 }
@@ -70,17 +72,17 @@ impl FixedTransitionOutput {
     }
 }
 impl TransitionOutput for FixedTransitionOutput {
-    fn generate_output(&self, _data: &str, _action: &str) -> Option<String> {
+    fn generate_output(&self, _data: &mut HashMap<String, String>, _action: &str) -> Option<String> {
         Some(String::from(&self.output))
     }
 }
 
 pub struct FnTransitionOutput<F>
-where F: Fn(&str, &str) -> Option<String> {
+where F: Fn(&mut HashMap<String, String>, &str) -> Option<String> {
     rule: F,
 }
 impl <F> FnTransitionOutput<F>
-where F: Fn(&str, &str) -> Option<String> {
+where F: Fn(&mut HashMap<String, String>, &str) -> Option<String> {
     pub fn new(rule: F) -> Self {
         Self {
             rule,
@@ -88,8 +90,8 @@ where F: Fn(&str, &str) -> Option<String> {
     }
 }
 impl <F> TransitionOutput for FnTransitionOutput<F>
-where F: Fn(&str, &str) -> Option<String> {
-    fn generate_output(&self, data: &str, action: &str) -> Option<String> {
+where F: Fn(&mut HashMap<String, String>, &str) -> Option<String> {
+    fn generate_output(&self, data: &mut HashMap<String, String>, action: &str) -> Option<String> {
         (&self.rule)(data, action)
     }
 }

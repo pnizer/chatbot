@@ -14,16 +14,17 @@ mod tests {
     }
 
     #[test]
-    fn state_should_transition_to_right_state() {        
-        let mut state: State = State::new("base");
+    fn state_should_transition_to_right_state() { 
+        let mut data = HashMap::new();
+        let mut state: State = State::new("base");        
         let transition_rule_1 = FnTransitionRule::new(|_data,action|action == "1");
         let transition_rule_2 = FnTransitionRule::new(|_data,action|action == "2");
         state.add_transition("one", transition_rule_1);
         state.add_transition("two", transition_rule_2);
 
-        let new_state_1 = state.transition("data", "1");
-        let new_state_2 = state.transition("data", "2");
-        let new_state_3 = state.transition("data", "3");
+        let new_state_1 = state.transition(&mut data, "1");
+        let new_state_2 = state.transition(&mut data, "2");
+        let new_state_3 = state.transition(&mut data, "3");
         
         assert_eq!("one", new_state_1.as_ref().unwrap().0);
         assert_eq!("two", new_state_2.as_ref().unwrap().0);
@@ -41,12 +42,13 @@ mod tests {
 
     #[test]
     fn state_should_have_optional_output() {
+        let mut data = HashMap::new();
         let name = "state 1";
         let mut state: State = State::new(name);
         let state_output = FixedStateOutput::new("hello there!");
         state.set_output(state_output);
         
-        let output: Option<String> = state.generate_output("data");
+        let output: Option<String> = state.generate_output(&mut data);
 
         assert_eq!(true, output.is_some());
         assert_eq!("hello there!", output.as_ref().unwrap());
@@ -54,7 +56,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_receive_states() {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
 
@@ -66,7 +68,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_return_state_by_name() {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
         state_machine.add_state(State::new(name_1));
@@ -81,7 +83,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_have_initial_state() -> Result<(), StateMachineErrors> {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
         state_machine.add_state(State::new(name_1));
@@ -95,7 +97,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_transition_state() -> Result<(), StateMachineErrors> {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
         let mut state_1 = State::new(name_1);
@@ -114,7 +116,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_transition_back_state() -> Result<(), StateMachineErrors> {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
         let mut state_1 = State::new(name_1);
@@ -134,7 +136,7 @@ mod tests {
 
     #[test]
     fn state_machine_should_transition_with_state_output() -> Result<(), StateMachineErrors> {
-        let mut state_machine: StateMachine = StateMachine::new("");
+        let mut state_machine: StateMachine = StateMachine::new(HashMap::new());
         let name_1 = "state 1";
         let name_2 = "state 2";
         let mut state_1 = State::new(name_1);

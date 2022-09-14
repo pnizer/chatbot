@@ -3,7 +3,7 @@ use chatbot::ChatbotBuilder;
 use context::ApplicationContext;
 use messages_gateway::{MessagesGateway, StateMachineBuilder};
 use telegram::TelegramReceiver;
-use std::{io::{self, BufRead, Error}, sync::Arc};
+use std::{io::{self, BufRead, Error}, sync::Arc, collections::HashMap};
 
 mod telegram;
 mod state_machine;
@@ -39,7 +39,7 @@ fn run_terminal_bot() -> Result<(), Error> {
     let chatbot_builder = ChatbotBuilder::new(
         application_context.registration_context.registration_manager.clone()
     );
-    let mut chatbot = chatbot_builder.build();
+    let mut chatbot = chatbot_builder.build(HashMap::new());
     let stdin = io::stdin();    
     for line_result in stdin.lock().lines() {
         let line = line_result?;

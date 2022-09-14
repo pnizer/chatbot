@@ -4,18 +4,19 @@ use self::transitions::EmptyTransitionOutput;
 
 pub mod transitions;
 pub mod state_output;
+pub mod form_states;
 mod state_machine_tests;
 
 pub trait TransitionRule {
-    fn test(&self, data: &str, action: &str) -> bool;
+    fn test(&self, data: &mut HashMap<String, String>, action: &str) -> bool;
 }
 
 pub trait TransitionOutput {
-    fn generate_output(&self, data: &str, action: &str) -> Option<String>;
+    fn generate_output(&self, data: &mut HashMap<String, String>, action: &str) -> Option<String>;
 }
 
 pub trait StateOutput {
-    fn generate_output(&self, data: &str) -> Option<String>;
+    fn generate_output(&self, data: &mut HashMap<String, String>) -> Option<String>;
 }
 
 #[derive(Debug)]
@@ -54,14 +55,14 @@ impl State {
         self.output = Some(Box::new(output));
     }
 
-    pub fn generate_output(&self, data: &str) -> Option<String> {
+    pub fn generate_output(&self, data: &mut HashMap<String, String>) -> Option<String> {
         match &self.output {
             None => None,
             Some(state_output) => state_output.generate_output(data)
         }
     }
 
-    pub fn transition(&self, data: &str, action: &str) -> Option<(String, Option<String>)> {        
+    pub fn transition(&self, data: &mut HashMap<String, String>, action: &str) -> Option<(String, Option<String>)> {        
         for (target, rule, output) in &self.transitions {
             if rule.test(data, action) {
                 return Some((String::from(target), output.generate_output(data, action)));
@@ -76,16 +77,16 @@ pub struct StateMachine
     states: HashMap<String, State>,    
     initial_state_name: Option<String>,
     current_state: Option<String>,
-    state_data: String,
+    state_data: HashMap<String, String>,
 }
 impl StateMachine
 {
-    pub fn new(state_data: &str) -> Self {
+    pub fn new(state_data: HashMap<String, String>) -> Self {
         Self { 
             states: HashMap::new(),
             initial_state_name: None,
             current_state: None,
-            state_data: String::from(state_data),
+            state_data: state_data,
         }
     }
 
@@ -136,17 +137,21 @@ impl StateMachine
             None => return Err(StateMachineErrors::InitialStateNotSet),
         };
         
-        let new_state_name = current_state.transition(&self.state_data, action);
+        let new_state_name = current_state.transition(&mut self.state_data, action);
         
         if let Some((n, transition_output)) = new_state_name {
             if !self.states.contains_key(&n) {
                 return Err(StateMachineErrors::StateNotFound)
             }
-            let state_output = self.states.get(&n).unwrap().generate_output(&self.state_data);
+            let state_output = self.states.get(&n).unwrap().generate_output(&mut self.state_data);
             self.current_state = Some(n);            
             return Ok((transition_output, state_output));
         };
         
         Err(StateMachineErrors::WrongTransition)
+    }
+
+    pub fn get_state_data(&self) -> &HashMap<String, String> {
+        return &self.state_data;
     }
 }

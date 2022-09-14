@@ -4,6 +4,7 @@ use mockall::automock;
 
 #[derive(Debug, Clone)]
 pub struct ChatState {
+    pub data: HashMap<String, String>,
     pub current_state: String,
 }
 

@@ -1,7 +1,7 @@
 mod chat_state;
 pub mod context;
 
-use std::{sync::Arc, cell::RefCell};
+use std::{sync::Arc, cell::RefCell, collections::HashMap};
 use mockall::automock;
 use crate::{telegram::{TelegramMessageArrived, TelegramListener, TelegramSender, SendTelegramMessage}, state_machine::StateMachine};
 
@@ -9,7 +9,7 @@ use self::chat_state::{States, ChatState};
 
 #[automock]
 pub trait StateMachineBuilder {
-    fn build(&self) -> StateMachine;
+    fn build(&self, state_data: HashMap<String, String>) -> StateMachine;
 }
 
 enum Message {
@@ -49,11 +49,17 @@ impl MessagesGateway {
 
     fn message_arrived(&self, message: Message) {
         let chat_id = message.chat_id();
-        let state = self.states.borrow_mut().get(&chat_id);
-        let mut state_machine = self.state_machine_builder.build();
-        if let Some(s) = state {
+        let state = self.states.borrow_mut().get(&chat_id);        
+        
+        let mut state_machine = if let Some(s) = state {            
+            let mut state_machine = self.state_machine_builder.build(s.data.clone());
             state_machine.set_current_state(&s.current_state).unwrap();
-        }
+            state_machine
+        } else {
+            let state_machine = self.state_machine_builder.build(HashMap::new());            
+            state_machine
+        };
+
         if let Ok(output) = state_machine.transition_state(&message.text()) {
             let (transition_output, state_output) = output;
             if let Some(text) = transition_output {
@@ -63,8 +69,9 @@ impl MessagesGateway {
                 self.answer_message(&message, &text);
             }
 
-            self.states.borrow_mut().change_state(&chat_id, ChatState {
+            self.states.borrow_mut().change_state(&chat_id, ChatState {                
                 current_state: state_machine.get_current_state().unwrap(),
+                data: state_machine.get_state_data().clone(),
             })
         }
     }
@@ -89,7 +96,7 @@ impl TelegramListener for MessagesGateway {
 
 #[cfg(test)]
 mod messages_gateway_tests {
-    use std::{cell::RefCell, sync::Arc};
+    use std::{cell::RefCell, sync::Arc, collections::HashMap};
     use crate::{telegram::MockTelegramSender, state_machine::{State, transitions::{EqTransitionRule, DefaultTransitionRule, FixedTransitionOutput}, state_output::FixedStateOutput}};
     use super::{*, chat_state::MockStates};
 
@@ -116,8 +123,8 @@ mod messages_gateway_tests {
         }
     }
 
-    fn build_state_machine() -> StateMachine {
-        let mut state_machine: StateMachine = StateMachine::new("");
+    fn build_state_machine(state_data: HashMap<String, String>) -> StateMachine {
+        let mut state_machine: StateMachine = StateMachine::new(state_data);
         let name_1 = "state-1";
         let name_2 = "state-2";
         let mut state = State::new(name_1);
@@ -199,6 +206,7 @@ mod messages_gateway_tests {
         let mut scope = TestScope::new();
         let chat_state = ChatState {
             current_state: String::from("state-2"),
+            data: HashMap::new(),
         };
         scope.mock_states.expect_get().return_once(move |_| Some(chat_state));        
         scope.state_machine_builder.expect_build().return_once(build_state_machine);
@@ -225,6 +233,7 @@ mod messages_gateway_tests {
         let mut scope = TestScope::new();
         let chat_state = ChatState {
             current_state: String::from("state-2"),
+            data: HashMap::new(),
         };
         scope.state_machine_builder.expect_build().return_once(build_state_machine);
         scope.mock_states.expect_get()
